@@ -42,6 +42,6 @@ according user's own need to upload data_set.
 it can trigger upload all guest or host config data_set in files_conf.json,you can run standalone in guest or host :
 python upload_hook.py -role ${role}
 
-# upload_check :
+# upload_check.py :
 return a Map reflect guest and host all table_info, judge each count,namespace,table_name
 condition tip user upload status in console or demo_logs

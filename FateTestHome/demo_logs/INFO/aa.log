@@ -1,0 +1,113 @@
+[ERROR]2020-04-06 01:37:36,467 line 226 :
+[31mnamespace:demo,table_name:breast_b1,eggroll count is 0[0m
+[ERROR]2020-04-06 01:37:36,467 line 226 :
+[31mnamespace:demo,table_name:breast_b2,eggroll count is 0[0m
+[INFO]2020-04-06 01:37:37,377 line 245 :
+[32mnamespace:demo,table_name:breast_a,eggroll count is 569[0m
+[ERROR]2020-04-06 01:37:37,378 line 243 :
+[31mnamespace:demo,table_name:breast_a2,eggroll count is 0[0m
+[ERROR]2020-04-06 01:44:11,090 line 229 :
+[31mnamespace:demo,table_name:breast_b1,eggroll count is 0[0m
+[ERROR]2020-04-06 01:44:11,091 line 229 :
+[31mnamespace:demo,table_name:breast_b2,eggroll count is 0[0m
+[INFO]2020-04-06 01:44:11,931 line 248 :
+[32mnamespace:demo,table_name:breast_a,eggroll count is 569[0m
+[ERROR]2020-04-06 01:44:11,931 line 246 :
+[31mnamespace:demo,table_name:breast_a2,eggroll count is 0[0m
+[ERROR]2020-04-06 01:55:09,748 line 230 :
+[31mnamespace:demo,table_name:breast_b1,eggroll count is 0[0m
+[ERROR]2020-04-06 01:55:09,748 line 230 :
+[31mnamespace:demo,table_name:breast_b2,eggroll count is 0[0m
+[INFO]2020-04-06 01:55:10,651 line 249 :
+[32mnamespace:demo,table_name:breast_a,eggroll count is 569[0m
+[ERROR]2020-04-06 01:55:10,651 line 247 :
+[31mnamespace:demo,table_name:breast_a2,eggroll count is 0[0m
+[ERROR]2020-04-06 02:04:03,757 line 230 :
+[31mnamespace:demo,table_name:breast_b1,eggroll count is 0[0m
+[ERROR]2020-04-06 02:04:03,758 line 230 :
+[31mnamespace:demo,table_name:breast_b2,eggroll count is 0[0m
+[INFO]2020-04-06 02:04:04,758 line 249 :
+[32mnamespace:demo,table_name:breast_a,eggroll count is 569[0m
+[ERROR]2020-04-06 02:04:04,758 line 247 :
+[31mnamespace:demo,table_name:breast_a2,eggroll count is 0[0m
+[INFO]2020-04-06 02:04:05,447 line 69 :
+[32m[exec_task] task_type:submit_job, role:guest exec success, stdout:
+{
+   "data": {
+      "board_url": "http://172.16.153.48:8080/index.html#/dashboard?job_id=20200406020405020497496&role=guest&party_id=9999",
+      "job_dsl_path": "/data/projects/fate/python/jobs/20200406020405020497496/job_dsl.json",
+      "job_runtime_conf_path": "/data/projects/fate/python/jobs/20200406020405020497496/job_runtime_conf.json",
+      "logs_directory": "/data/projects/fate/python/logs/20200406020405020497496",
+      "model_info": {
+         "model_id": "arbiter-10000#guest-9999#host-10000#model",
+         "model_version": "20200406020405020497496"
+      }
+   },
+   "jobId": "20200406020405020497496",
+   "retcode": 0,
+   "retmsg": "success"
+}[0m
+[INFO]2020-04-06 02:04:05,472 line 69 :
+[32m[exec_task] task_type:submit_job, role:guest exec success, stdout:
+{
+   "data": {
+      "board_url": "http://172.16.153.48:8080/index.html#/dashboard?job_id=20200406020405038248497&role=guest&party_id=9999",
+      "job_dsl_path": "/data/projects/fate/python/jobs/20200406020405038248497/job_dsl.json",
+      "job_runtime_conf_path": "/data/projects/fate/python/jobs/20200406020405038248497/job_runtime_conf.json",
+      "logs_directory": "/data/projects/fate/python/logs/20200406020405038248497",
+      "model_info": {
+         "model_id": "arbiter-10000#guest-9999#host-10000#model",
+         "model_version": "20200406020405038248497"
+      }
+   },
+   "jobId": "20200406020405038248497",
+   "retcode": 0,
+   "retmsg": "success"
+}[0m
+[INFO]2020-04-06 02:04:05,482 line 69 :
+[32m[exec_task] task_type:submit_job, role:guest exec success, stdout:
+{
+   "data": {
+      "board_url": "http://172.16.153.48:8080/index.html#/dashboard?job_id=20200406020405047303498&role=guest&party_id=9999",
+      "job_dsl_path": "/data/projects/fate/python/jobs/20200406020405047303498/job_dsl.json",
+      "job_runtime_conf_path": "/data/projects/fate/python/jobs/20200406020405047303498/job_runtime_conf.json",
+      "logs_directory": "/data/projects/fate/python/logs/20200406020405047303498",
+      "model_info": {
+         "model_id": "arbiter-10000#guest-9999#host-10000#model",
+         "model_version": "20200406020405047303498"
+      }
+   },
+   "jobId": "20200406020405047303498",
+   "retcode": 0,
+   "retmsg": "success"
+}[0m
+[INFO]2020-04-06 02:04:05,604 line 69 :
+[32m[exec_task] task_type:submit_job, role:guest exec success, stdout:
+{
+   "data": {
+      "board_url": "http://172.16.153.48:8080/index.html#/dashboard?job_id=20200406020405007893495&role=guest&party_id=9999",
+      "job_dsl_path": "/data/projects/fate/python/jobs/20200406020405007893495/job_dsl.json",
+      "job_runtime_conf_path": "/data/projects/fate/python/jobs/20200406020405007893495/job_runtime_conf.json",
+      "logs_directory": "/data/projects/fate/python/logs/20200406020405007893495",
+      "model_info": {
+         "model_id": "arbiter-10000#guest-9999#host-10000#model",
+         "model_version": "20200406020405007893495"
+      }
+   },
+   "jobId": "20200406020405007893495",
+   "retcode": 0,
+   "retmsg": "success"
+}[0m
+[INFO]2020-04-06 02:05:35,810 line 154 :
+[32m20200406020405047303498 task finished status is success,elapsedTime 90.276 seconds.....OK[0m
+[INFO]2020-04-06 02:05:59,011 line 154 :
+[32m20200406020405038248497 task finished status is success,elapsedTime 113.515 seconds.....OK[0m
+[INFO]2020-04-06 02:06:05,288 line 154 :
+[32m20200406020405007893495 task finished status is success,elapsedTime 119.586 seconds.....OK[0m
+[INFO]2020-04-06 02:06:08,070 line 154 :
+[32m20200406020405020497496 task finished status is success,elapsedTime 122.606 seconds.....OK[0m
+[INFO]2020-04-06 02:06:08,070 line 169 :
+==============================->finish all tasks.....+
+
+[INFO]2020-04-06 02:06:08,071 line 277 :
+==============================->exit ......

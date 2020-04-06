@@ -9,7 +9,6 @@
   "ssh_port_host": null,
   "src_path": "",
   "dest_path": "",
-  "FLOW_HOME": "/data/projects/fate/python/fate_flow",
   "FATE_FLOW_PATH": "/data/projects/fate/python/fate_flow/fate_flow_client.py",
   "env_path": "/data/projects/fate/init_env.sh",
   "JOB_TIMEOUT_SECONDS": 240

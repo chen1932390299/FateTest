@@ -24,18 +24,18 @@ ttl = ssh_conf.get("JOB_TIMEOUT_SECONDS")
 files_conf = json.load(open("./demo_conf/files_conf.json", "r+")).get("file_conf")
 
 
-def sub_task(dsl_path, config_path, role,param_test,expect_status):
+def sub_task(dsl_path, config_path, role, param_test, expect_status):
     task = "submit_job"
-    with open(dsl_path,"r+") as f:
-        dsl_dict=json.load(f)
-    with open(config_path,"r+") as e:
-        conf_ctx=json.load(e)
-        conf_dict=muti_replace(param_test,conf_ctx)
-    dsl=tempfile.NamedTemporaryFile("w+b",suffix=".json",dir="./examples",delete=True)
-    conf=tempfile.NamedTemporaryFile("w+b",suffix=".json",dir="./examples",delete=True)
-    dsl.write(json.dumps(dsl_dict,indent=2).encode())
-    conf.write(json.dumps(conf_dict,indent=2).encode())
-    dsl_path,config_path=dsl.name,conf.name
+    with open(dsl_path, "r+") as f:
+        dsl_dict = json.load(f)
+    with open(config_path, "r+") as e:
+        conf_ctx = json.load(e)
+        conf_dict = muti_replace(param_test, conf_ctx)
+    dsl = tempfile.NamedTemporaryFile("w+b", suffix=".json", dir="./examples", delete=True)
+    conf = tempfile.NamedTemporaryFile("w+b", suffix=".json", dir="./examples", delete=True)
+    dsl.write(json.dumps(dsl_dict, indent=2).encode())
+    conf.write(json.dumps(conf_dict, indent=2).encode())
+    dsl_path, config_path = dsl.name, conf.name
     dsl.seek(0)
     conf.seek(0)
     sub = subprocess.Popen(["python",
@@ -49,10 +49,10 @@ def sub_task(dsl_path, config_path, role,param_test,expect_status):
                            shell=False,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT)
-    if os.path.exists(dsl.name):print(dsl.name)
-    if os.path.exists(conf.name):print(conf.name)
-    print("*"*60)
-    
+    if os.path.exists(dsl.name): print(dsl.name)
+    if os.path.exists(conf.name): print(conf.name)
+    print("*" * 60)
+
     stdout, stderr = sub.communicate()
     stdout = stdout.decode("utf-8")
     stdout = json.loads(stdout)
@@ -65,9 +65,9 @@ def sub_task(dsl_path, config_path, role,param_test,expect_status):
             color_str(tip, "red")
         )
     message = color_str("%s", "green") % f"[exec_task] task_type:{task}" \
-        f", role:{role} exec success, stdout:\n{json.dumps(stdout, indent=3)}"
+                                         f", role:{role} exec success, stdout:\n{json.dumps(stdout, indent=3)}"
     logging.info(message)
-    
+
     return stdout
 
 
@@ -87,7 +87,7 @@ async def jobs(job_id):
             ud = datetime.utcfromtimestamp(update_time / 1000)
             running_time = (ud - st).seconds
         if job_status in ["success", "failed"]:
-            if job_status in ["success", "failed","canceled"]:
+            if job_status in ["success", "failed", "canceled"]:
                 return response
         else:
             # running ,"waiting"
@@ -127,24 +127,27 @@ def worker_consumer(q_init):
         if q_init.empty():
             break
         conf = q_init.get()
-        dsl_path, config_path,param_test,expect_status= conf["dsl_path"], conf["config_path"], conf["param_test"],conf["expect_status"]
-        stdout = sub_task(dsl_path, config_path, role="guest",param_test=param_test,expect_status=expect_status)
+        dsl_path, config_path, param_test, expect_status = conf["dsl_path"], conf["config_path"], conf["param_test"], \
+                                                           conf["expect_status"]
+        stdout = sub_task(dsl_path, config_path, role="guest", param_test=param_test, expect_status=expect_status)
         if stdout and stdout["retcode"] == 0:
             job_id = stdout["jobId"]
             rep = furture_run(job_id)
             f_status = rep["data"]["job"]["fStatus"]
             elpasedTime = rep["data"]["job"]["fElapsed"]
-            signal,colors = None,None
+            signal, colors = None, None
             if f_status in ["success", "failed"]:
-                if f_status == expect_status:colors, signal = "green","OK"
-                elif f_status !=expect_status:colors,signal  = "red","FALSE"
+                if f_status == expect_status:
+                    colors, signal = "green", "OK"
+                elif f_status != expect_status:
+                    colors, signal = "red", "FALSE"
             else:
-                logging.error(color_str(f"unexpected callback status is {f_status}","red"))
+                logging.error(color_str(f"unexpected callback status is {f_status}", "red"))
             logging.info(
-                    color_str("%s", colors) %
-                    "%s task finished status is %s,expect_status:%s,elapsedTime %s seconds.....%s" % (
-                    job_id, f_status,expect_status ,elpasedTime / 1000, signal)
-                )
+                color_str("%s", colors) %
+                "%s task finished status is %s,expect_status:%s,elapsedTime %s seconds.....%s" % (
+                    job_id, f_status, expect_status, elpasedTime / 1000, signal)
+            )
             q_init.task_done()
         else:
             raise ValueError(color_str("%s", "red") %
@@ -203,12 +206,12 @@ def upload_task():
 
 
 def check_table():
-    early_stop=0
+    early_stop = 0
     check_cwd = os.getcwd()
     exe_cmd_guest = f"source {env_path} && cd {check_cwd} && python upload_check.py -role guest"
-    exe_cmd_host = f"source {env_path} && cd {check_cwd} && python upload_check.py -role host"
+    exe_cmd_host = f"ssh {host_ip} source {env_path} && cd {check_cwd} && python upload_check.py -role host"
     try:
-        print("\n" + "--" * 30 + f"\nstart check guest table_info:****{guest_ip}".upper()+"\n" + "--" * 30 + "\n")
+        print("\n" + "--" * 30 + f"\nstart check guest table_info:****{guest_ip}".upper() + "\n" + "--" * 30 + "\n")
         pipe = subprocess.Popen(exe_cmd_guest, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         out, err = pipe.communicate()
         if pipe.returncode != 0:
@@ -219,12 +222,12 @@ def check_table():
                 data = it.get("data")
                 db, tb, count = data.get("namespace"), data.get("table_name"), data.get("count")
                 if count == 0:
-                    early_stop +=1
+                    early_stop += 1
                     logging.error(color_str(f"namespace:{db},table_name:{tb},eggroll count is {count}", "red"))
                 else:
                     logging.info(color_str(f"namespace:{db},table_name:{tb},eggroll count is {count}", "green"))
     finally:
-        print("--" * 30 + "\n" + f"start check host table_info:****{host_ip}".upper()+"\n" + "--" * 30 + "\n")
+        print("--" * 30 + "\n" + f"start check host table_info:****{host_ip}".upper() + "\n" + "--" * 30 + "\n")
         pipe_host = subprocess.Popen(exe_cmd_host, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         out_host, err_host = pipe_host.communicate()
         if pipe_host.returncode != 0:
@@ -241,6 +244,7 @@ def check_table():
                     logging.info(color_str(f"namespace:{db_a},table_name:{tb_a},eggroll count is {count_a}", "green"))
     if early_stop: raise NameError("check upload false")
 
+
 if __name__ == '__main__':
     try:
         upload_task()
@@ -250,7 +254,6 @@ if __name__ == '__main__':
         print("--" * 30 + "\n" + "->Start check ${namespace} ${table_info} uploaded ...\n" + "--" * 30 + "\n")
         check_table()
         print("--" * 30 + "\n" + "finish all guest and host upload check".upper() + "\n" + "--" * 30 + "\n")
-    # finally:
         try:
             producer = [threading.Thread(target=producer, args=(q_init,))]
             consumer = [threading.Thread(target=worker_consumer, args=(q_init,)) for i in range(5)]

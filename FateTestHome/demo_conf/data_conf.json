@@ -1,0 +1,44 @@
+{
+    "conf": [
+        {
+            "dsl_path": "examples/test_hetero_lr_job_dsl.json",
+            "config_path": "examples/test_hetero_lr_job_conf.json",
+            "algorithm_type": "hetero",
+            "param_test": {
+                "$..hetero_lr_0..batch_size": 200,
+                "$..hetero_lr_0..learning_rate": 0.2
+            },
+            "expect_status": "failed"
+        },
+        {
+            "dsl_path": "examples/test_hetero_lr_job_dsl.json",
+            "config_path": "examples/test_hetero_lr_job_conf.json",
+            "algorithm_type": "hetero",
+            "param_test": {
+                "$..hetero_lr_0..batch_size": 250,
+                "$..hetero_lr_0..learning_rate": 0.3
+            },
+            "expect_status": "success"
+        },
+        {
+            "dsl_path": "examples/test_hetero_lr_job_dsl.json",
+            "config_path": "examples/test_hetero_lr_job_conf.json",
+            "algorithm_type": "hetero",
+            "param_test": {
+                "$..hetero_lr_0..max_iter": 4,
+                "$..hetero_lr_0..learning_rate": 0.2
+            },
+            "expect_status": "success"
+        },
+        {
+            "dsl_path": "examples/test_hetero_lr_job_dsl.json",
+            "config_path": "examples/test_hetero_lr_job_conf.json",
+            "algorithm_type": "hetero",
+            "param_test": {
+                "$..hetero_lr_0..max_iter": 2,
+                "$..hetero_lr_0..learning_rate": 0.2
+            },
+            "expect_status": "success"
+        }
+    ]
+}

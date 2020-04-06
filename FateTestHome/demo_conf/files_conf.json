@@ -1,0 +1,57 @@
+{
+  "file_conf": [
+    {
+      "guest": {
+        "file": "examples/data/breast_b.csv",
+        "local": {
+          "party_id": 9999,
+          "role": "guest"
+        },
+        "head": 1,
+        "partition": 10,
+        "table_name": "breast_b",
+        "namespace": "demo",
+        "work_mode": 1
+      },
+      "host": {
+        "file": "examples/data/breast_a.csv",
+        "local": {
+          "party_id": 10000,
+          "role": "host"
+        },
+        "head": 1,
+        "partition": 10,
+        "table_name": "breast_a",
+        "namespace": "demo",
+        "work_mode": 1
+      }
+    },
+        {
+      "guest": {
+        "file": "examples/data/breast_b.csv",
+        "local": {
+          "party_id": 9999,
+          "role": "guest"
+        },
+        "head": 1,
+        "partition": 10,
+        "table_name": "breast_b",
+        "namespace": "demo",
+        "work_mode": 1
+      },
+      "host": {
+        "file": "examples/data/breast_a.csv",
+        "local": {
+          "party_id": 10000,
+          "role": "host"
+        },
+        "head": 1,
+        "partition": 10,
+        "table_name": "breast_a",
+        "namespace": "demo",
+        "work_mode": 1
+      }
+    }
+
+  ]
+}

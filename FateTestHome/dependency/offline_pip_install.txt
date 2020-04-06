@@ -1,2 +1,0 @@
-pip install --no-index --ignore-installed  --find-links=./dependency   -r   requirements.txt
-pip download -d ./dependency -r requirements.txt

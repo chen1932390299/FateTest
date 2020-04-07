@@ -137,7 +137,7 @@ def worker_consumer(q_init):
                 elif f_status != expect_status: colors, signal = "red", "FALSE"
             else: logging.error(color_str(f"unexpected callback status is {f_status}", "red"))
             logging.info(color_str("%s", colors) % f"{job_id} task finished status is {f_status},"
-             f"expect_status:{expect_status},elapsedTime: {elapsed_time} seconds......{signal}")
+             f"expect_status:{expect_status},elapsedTime: {elapsed_time/1000} seconds......{signal}")
             q_init.task_done()
         else:
             raise ValueError(color_str("%s", "red") %

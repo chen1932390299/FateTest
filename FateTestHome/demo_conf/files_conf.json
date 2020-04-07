@@ -26,7 +26,7 @@
         "work_mode": 1
       }
     },
-        {
+    {
       "guest": {
         "file": "examples/data/breast_b.csv",
         "local": {
@@ -51,7 +51,21 @@
         "namespace": "demo",
         "work_mode": 1
       }
+    },
+    {
+      "guest":
+              {
+        "file": "examples/data/breast_a.csv",
+        "local": {
+          "party_id": 9999,
+          "role": "guest"
+        },
+        "head": 1,
+        "partition": 10,
+        "table_name": "breast_a",
+        "namespace": "multi_host_in_guest",
+        "work_mode": 1
+      }
     }
-
   ]
 }

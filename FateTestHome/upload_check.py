@@ -16,17 +16,19 @@ def check_table_info():
     operate_role = args.role
     for cx in file_conf:
         role_file_conf = cx.get(operate_role)
-        namespace = role_file_conf.get("namespace")
-        table_name = role_file_conf.get("table_name")
-        exe_cmd = f"source {ENV_PATH}&& python {FATE_FLOW_PATH} -f table_info -n {namespace} -t {table_name}"
-        pipe = subprocess.Popen(exe_cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT)
-        out, err = pipe.communicate()
-        if pipe.returncode != 0:
-            raise ValueError(err)
-        else:
-            out_dict = json.loads(out)
-            schema_info.get('table_info').append(out_dict)
+        if role_file_conf:
+            namespace = role_file_conf.get("namespace")
+            table_name = role_file_conf.get("table_name")
+            exe_cmd = f"source {ENV_PATH}&& python {FATE_FLOW_PATH} -f table_info -n {namespace} -t {table_name}"
+            pipe = subprocess.Popen(exe_cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
+            out, err = pipe.communicate()
+            if pipe.returncode != 0:
+                raise ValueError(err)
+            else:
+                out_dict = json.loads(out)
+                schema_info.get('table_info').append(out_dict)
+        else:pass
     print(json.dumps(schema_info, indent=3))
 
 

@@ -18,8 +18,8 @@ def check_table_info():
         role_file_conf = cx.get(operate_role)
         namespace = role_file_conf.get("namespace")
         table_name = role_file_conf.get("table_name")
-        COMMAND = f"source {ENV_PATH}&& python {FATE_FLOW_PATH} -f table_info -n {namespace} -t {table_name}"
-        pipe = subprocess.Popen(COMMAND, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+        exe_cmd = f"source {ENV_PATH}&& python {FATE_FLOW_PATH} -f table_info -n {namespace} -t {table_name}"
+        pipe = subprocess.Popen(exe_cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT)
         out, err = pipe.communicate()
         if pipe.returncode != 0:

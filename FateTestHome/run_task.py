@@ -18,7 +18,7 @@ guest_ip = ssh_conf.get("guest_ip")
 host_ip = ssh_conf.get("host_ip")
 env_path = ssh_conf.get("env_path")
 FATE_FLOW_PATH = ssh_conf.get("FATE_FLOW_PATH")
-partid_guest = ssh_conf.get("guest_part_id")
+part_id_guest = ssh_conf.get("guest_part_id")
 data_conf = json.load(open("./demo_conf/data_conf.json", "r+")).get("conf")
 ttl = ssh_conf.get("JOB_TIMEOUT_SECONDS")
 files_conf = json.load(open("./demo_conf/files_conf.json", "r+")).get("file_conf")
@@ -72,11 +72,8 @@ def sub_task(dsl_path, config_path, role, param_test, expect_status):
 
 
 async def jobs(job_id):
-    guestIp = guest_ip  # todo set guest_board ip
-    jobId = job_id
-    part_id_guest = partid_guest
     while True:
-        res = requests.get(url=f"http://{guestIp}:8080/job/query/{jobId}/guest/{part_id_guest}")
+        res = requests.get(url=f"http://{guest_ip}:8080/job/query/{job_id}/guest/{part_id_guest}")
         response = res.json()
         job_status = response["data"]["job"]["fStatus"]
         start_time = response["data"]["job"]["fStartTime"]
@@ -111,7 +108,7 @@ async def do_work(job_id):
     return msg
 
 
-def furture_run(job_id):
+def future_run(job_id):
     new_loop = asyncio.new_event_loop()
     asyncio.set_event_loop(new_loop)
     loop = asyncio.get_event_loop()
@@ -124,30 +121,23 @@ def furture_run(job_id):
 
 def worker_consumer(q_init):
     while True:
-        if q_init.empty():
-            break
+        if q_init.empty(): break
         conf = q_init.get()
-        dsl_path, config_path, param_test, expect_status = conf["dsl_path"], conf["config_path"], conf["param_test"], \
-                                                           conf["expect_status"]
+        dsl_path, config_path, param_test, expect_status = conf["dsl_path"]\
+            , conf["config_path"], conf["param_test"], conf["expect_status"]
         stdout = sub_task(dsl_path, config_path, role="guest", param_test=param_test, expect_status=expect_status)
         if stdout and stdout["retcode"] == 0:
             job_id = stdout["jobId"]
-            rep = furture_run(job_id)
+            rep = future_run(job_id)
             f_status = rep["data"]["job"]["fStatus"]
-            elpasedTime = rep["data"]["job"]["fElapsed"]
+            elapsed_time = rep["data"]["job"]["fElapsed"]
             signal, colors = None, None
             if f_status in ["success", "failed"]:
-                if f_status == expect_status:
-                    colors, signal = "green", "OK"
-                elif f_status != expect_status:
-                    colors, signal = "red", "FALSE"
-            else:
-                logging.error(color_str(f"unexpected callback status is {f_status}", "red"))
-            logging.info(
-                color_str("%s", colors) %
-                "%s task finished status is %s,expect_status:%s,elapsedTime %s seconds.....%s" % (
-                    job_id, f_status, expect_status, elpasedTime / 1000, signal)
-            )
+                if f_status == expect_status: colors, signal = "green", "OK"
+                elif f_status != expect_status: colors, signal = "red", "FALSE"
+            else: logging.error(color_str(f"unexpected callback status is {f_status}", "red"))
+            logging.info(color_str("%s", colors) % f"{job_id} task finished status is {f_status},"
+             f"expect_status:{expect_status},elapsedTime: {elapsed_time} seconds......{signal}")
             q_init.task_done()
         else:
             raise ValueError(color_str("%s", "red") %
@@ -180,11 +170,11 @@ def color_str(tip, color):
 def upload_task():
     """build on free hand ssh remote guest and host """
     hook_pwd = os.getcwd()
-    COMMAND_GUEST = f"source {env_path}&&cd {hook_pwd}&& python upload_hook.py -role guest"
-    COMMAND_HOST = f"ssh {host_ip}  source {env_path}&&cd {hook_pwd}&& python upload_hook.py -role host"
+    command_guest = f"source {env_path}&&cd {hook_pwd}&& python upload_hook.py -role guest"
+    command_host = f"ssh {host_ip}  source {env_path}&&cd {hook_pwd}&& python upload_hook.py -role host"
     try:
         print("--" * 30 + "\n" + f"start upload guest:****{guest_ip}\n" + "--" * 30 + "\n")
-        sp_guest = subprocess.Popen(COMMAND_GUEST, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        sp_guest = subprocess.Popen(command_guest, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         out_guest, err_guest = sp_guest.communicate()
         if sp_guest.returncode == 0:
             logging.debug(out_guest.decode())
@@ -195,7 +185,7 @@ def upload_task():
     finally:
         try:
             print("--" * 30 + "\n" + f"start upload host:****{host_ip}\n" + "--" * 30 + "\n")
-            sp_host = subprocess.Popen(COMMAND_HOST, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            sp_host = subprocess.Popen(command_host, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             out_host, err_host = sp_host.communicate()
             if sp_host.returncode == 0:
                 logging.debug(out_host.decode())
@@ -246,29 +236,25 @@ def check_table():
 
 
 if __name__ == '__main__':
+    upload_task()
+    print("--" * 30 + "\n" + "->Start check ${namespace} ${table_info} uploaded ...\n" + "--" * 30 + "\n")
+    check_table()
+    print("--" * 30 + "\n" + "finish all guest and host upload check".upper() + "\n" + "--" * 30 + "\n")
     try:
-        upload_task()
+        producer = [threading.Thread(target=producer, args=(q_init,))]
+        consumer = [threading.Thread(target=worker_consumer, args=(q_init,)) for i in range(5)]
+        consumer_pool = []
+        producer_pool = []
+        for p in producer:
+            p.start()
+            producer_pool.append(p)
+        for k in consumer:
+            k.start()
+            consumer_pool.append(k)
+        for m in consumer:
+            m.join()
+        for p in producer_pool:
+            p.join()
+        logging.info("=" * 30 + "->exit ......")
     except Exception as e:
-        raise Exception(e)
-    else:
-        print("--" * 30 + "\n" + "->Start check ${namespace} ${table_info} uploaded ...\n" + "--" * 30 + "\n")
-        check_table()
-        print("--" * 30 + "\n" + "finish all guest and host upload check".upper() + "\n" + "--" * 30 + "\n")
-        try:
-            producer = [threading.Thread(target=producer, args=(q_init,))]
-            consumer = [threading.Thread(target=worker_consumer, args=(q_init,)) for i in range(5)]
-            consumer_pool = []
-            producer_pool = []
-            for p in producer:
-                p.start()
-                producer_pool.append(p)
-            for k in consumer:
-                k.start()
-                consumer_pool.append(k)
-            for m in consumer:
-                m.join()
-            for p in producer_pool:
-                p.join()
-            logging.info("=" * 30 + "->exit ......")
-        except Exception as e:
-            logging.error(e)
+        logging.error(e)

@@ -11,7 +11,7 @@ from explore_core import muti_replace
 from datetime import datetime
 
 logging = logger("run_task", console_print=True, logging_level=['INFO'], console_debug_level="INFO")
-q_init = queue.Queue(maxsize=5)
+job_queue = queue.Queue(maxsize=5)
 with open("./demo_conf/ssh_conf.json", "r+")as f:
     ssh_conf = json.load(f)
 guest_ip = ssh_conf.get("guest_ip")
@@ -24,7 +24,7 @@ ttl = ssh_conf.get("JOB_TIMEOUT_SECONDS")
 files_conf = json.load(open("./demo_conf/files_conf.json", "r+")).get("file_conf")
 
 
-def sub_task(dsl_path, config_path, role, param_test, expect_status):
+def sub_task(dsl_path, config_path, role, param_test):
     task = "submit_job"
     with open(dsl_path, "r+") as f:
         dsl_dict = json.load(f)
@@ -119,38 +119,51 @@ def future_run(job_id):
     return result
 
 
-def worker_consumer(q_init):
-    while True:
-        if q_init.empty(): break
-        conf = q_init.get()
-        dsl_path, config_path, param_test, expect_status = conf["dsl_path"]\
-            , conf["config_path"], conf["param_test"], conf["expect_status"]
-        stdout = sub_task(dsl_path, config_path, role="guest", param_test=param_test, expect_status=expect_status)
-        if stdout and stdout["retcode"] == 0:
-            job_id = stdout["jobId"]
-            rep = future_run(job_id)
-            f_status = rep["data"]["job"]["fStatus"]
-            elapsed_time = rep["data"]["job"]["fElapsed"]
-            signal, colors = None, None
-            if f_status in ["success", "failed"]:
-                if f_status == expect_status: colors, signal = "green", "OK"
-                elif f_status != expect_status: colors, signal = "red", "FALSE"
-            else: logging.error(color_str(f"unexpected callback status is {f_status}", "red"))
-            logging.info(color_str("%s", colors) % f"{job_id} task finished status is {f_status},"
-             f"expect_status:{expect_status},elapsedTime: {elapsed_time/1000} seconds......{signal}")
-            q_init.task_done()
-        else:
-            raise ValueError(color_str("%s", "red") %
-                             "submit_job return code not 0,stdout: \n{}".format(stdout)
-                             )
+class ConsumerJobConf(threading.Thread):
+    def __init__(self,queue):
+        super().__init__()
+        self.queue = queue
+
+    def run(self):
+        while True:
+            if self.queue.empty(): break
+            conf = self.queue.get()
+            dsl_path, config_path, param_test, expect_status = conf["dsl_path"] \
+                , conf["config_path"], conf["param_test"], conf["expect_status"]
+            stdout = sub_task(dsl_path, config_path, role="guest", param_test=param_test)
+            if stdout and stdout["retcode"] == 0:
+                job_id = stdout["jobId"]
+                rep = future_run(job_id)
+                f_status = rep["data"]["job"]["fStatus"]
+                elapsed_time = rep["data"]["job"]["fElapsed"]
+                signal, colors = None, None
+                if f_status in ["success", "failed"]:
+                    if f_status == expect_status:
+                        colors, signal = "green", "OK"
+                    elif f_status != expect_status:
+                        colors, signal = "red", "FALSE"
+                else:
+                    logging.error(color_str(f"unexpected callback status is {f_status}", "red"))
+                logging.info(color_str("%s", colors) % f"{job_id} task finished status is {f_status},"
+                                                       f"expect_status:{expect_status},elapsedTime: {elapsed_time / 1000} seconds......{signal}")
+                self.queue.task_done()
+            else:
+                raise ValueError(color_str("%s", "red") %
+                                 "submit_job return code not 0,stdout: \n{}".format(stdout)
+                                 )
 
 
-def producer(q_init):
-    for item in data_conf:
-        q_init.put(item)
-    q_init.join()
-    print("=" * 50 + "\n")
-    logging.info("=" * 30 + "->finish all tasks.....+\n")
+class ProducerJobConf(threading.Thread):
+    def __init__(self, queue):
+        super().__init__()
+        self.queue = queue
+
+    def run(self):
+        for item in data_conf:
+            self.queue.put(item)
+        self.queue.join()
+        print("=" * 50 + "\n")
+        logging.info("=" * 30 + "->finish all tasks.....+\n")
 
 
 def color_str(tip, color):
@@ -167,35 +180,54 @@ def color_str(tip, color):
         return "\033[35m%s\033[0m" % tip
 
 
-def upload_task():
-    """build on free hand ssh remote guest and host """
-    hook_pwd = os.getcwd()
-    command_guest = f"source {env_path}&&cd {hook_pwd}&& python upload_hook.py -role guest"
-    command_host = f"ssh {host_ip}  source {env_path}&&cd {hook_pwd}&& python upload_hook.py -role host"
-    command_list=[command_guest,command_host]
-    for index,cmd in enumerate(command_list):
-        if index ==0:print("--" * 30 + "\n" + f"start upload guest:****{guest_ip}\n" + "--" * 30 + "\n")
-        if index ==1:print("--" * 30 + "\n" + f"start upload host:****{host_ip}\n" + "--" * 30 + "\n")
+def upload_func(operate_role):
+    if operate_role=="guest":
+        print("--" * 30 + "\n" + f"start upload guest:****{guest_ip}\n" + "--" * 30 + "\n")
+        hook_pwd = os.getcwd()
+        command_guest = f"source {env_path}&&cd {hook_pwd}&& python upload_hook.py -role guest"
         try:
-            sp = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            sp = subprocess.Popen(command_guest, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             out, err = sp.communicate()
             if sp.returncode == 0: logging.info(out.decode())
             else: logging.error(err)
         except Exception as e: logging.error(e)
+    if operate_role=="host":
+        print("--" * 30 + "\n" + f"start upload host:****{host_ip}\n" + "--" * 30 + "\n")
+        for cf in files_conf:
+            role_file_conf = cf.get(operate_role)
+            if role_file_conf:
+                with tempfile.NamedTemporaryFile("w",delete=True,suffix=".json") as f:
+                    json.dump(role_file_conf, f)
+                    f.flush()
+                    if host_ip:
+                        st=subprocess.Popen(["scp", f.name, f"{host_ip}:{f.name}"],shell=False)
+                        upload_cmd = " && ".join([f"source {env_path}",
+                                                  f"python {FATE_FLOW_PATH} -f upload -c {f.name}",
+                                                  f"rm {f.name}"])
+                        sub=subprocess.Popen(["ssh", host_ip, upload_cmd],shell=False,stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                        out,err=sub.communicate()
+                        if sub.returncode ==0:
+                            logging.info(out.decode())
+                        else:logging.error(err)
+            else:pass
 
 
-def check_table():
+def upload_task():
+    try:
+        upload_func("guest")
+    finally:upload_func("host")
+
+
+def check_func(role):
     early_stop = 0
-    check_cwd = os.getcwd()
-    exe_cmd_guest = f"source {env_path} && cd {check_cwd} && python upload_check.py -role guest"
-    exe_cmd_host = f"ssh {host_ip} source {env_path} && cd {check_cwd} && python upload_check.py -role host"
-    exe_cmd_list=[exe_cmd_guest,exe_cmd_host]
-    for index,cmd in enumerate(exe_cmd_list):
-        if index ==0: print("\n" + "--" * 30 + f"\nstart check guest table_info:****{guest_ip}".upper() + "\n" + "--" * 30 + "\n")
-        if index ==1: print("--" * 30 + "\n" + f"start check host table_info:****{host_ip}".upper() + "\n" + "--" * 30 + "\n")
+    if role == "guest":
+        check_cwd = os.getcwd()
+        cmd = f"source {env_path} && cd {check_cwd} && python upload_check.py -role guest"
+        print("\n" + "--" * 30 + f"\nstart check guest table_info:****{guest_ip}".upper() + "\n" + "--" * 30 + "\n")
         pipe = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         out, err = pipe.communicate()
-        if pipe.returncode != 0:logging.error(err)
+        if pipe.returncode != 0:
+            logging.error(err)
         else:
             msg_list = json.loads(out.decode()).get("table_info")
             for it in msg_list:
@@ -207,7 +239,36 @@ def check_table():
                 else:
                     logging.info(color_str(f"namespace:{db},table_name:{tb},eggroll count is {count}", "green"))
 
-    if early_stop: raise NameError("check upload false")
+        if early_stop: raise NameError("check guest upload false")
+    if role == "host":
+        print("--" * 30 + "\n" + f"start check host table_info:****{host_ip}".upper() + "\n" + "--" * 30 + "\n")
+        for cf in files_conf:
+            role_file_conf = cf.get(role)
+            if role_file_conf:
+                namespace = role_file_conf.get("namespace")
+                table_name = role_file_conf.get("table_name")
+                if host_ip:
+                    query_table_cmd = " && ".join([f"source {env_path}",
+                                              f"python {FATE_FLOW_PATH} -f table_info -n {namespace} -t {table_name}"
+                                              ])
+                    sub=subprocess.Popen(["ssh", host_ip, query_table_cmd],shell=False,stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                    out,err=sub.communicate()
+                    if sub.returncode ==0:
+                        data=json.loads(out.decode()).get("data")
+                        count,tag=data.get("count"),None
+                        if count ==0: logging.error(color_str(f"namespace: {namespace}, table_name: {table_name} count:{count}","red"))
+                        else:logging.info(color_str(f"namespace: {namespace}, table_name: {table_name} count:{count}","green"))
+                        if count ==0:early_stop +=1
+                    else:logging.error(err)
+            else:pass
+        if early_stop: raise  NameError("check host upload false")
+
+
+def check_table():
+    try:
+        check_func("guest")
+    finally:
+        check_func("host")
 
 
 if __name__ == '__main__':
@@ -215,21 +276,19 @@ if __name__ == '__main__':
     print("--" * 30 + "\n" + "->Start check ${namespace} ${table_info} uploaded ...\n" + "--" * 30 + "\n")
     check_table()
     print("--" * 30 + "\n" + "finish all guest and host upload check".upper() + "\n" + "--" * 30 + "\n")
-    try:
-        producer = [threading.Thread(target=producer, args=(q_init,))]
-        consumer = [threading.Thread(target=worker_consumer, args=(q_init,)) for i in range(5)]
-        consumer_pool = []
-        producer_pool = []
-        for p in producer:
-            p.start()
-            producer_pool.append(p)
-        for k in consumer:
-            k.start()
-            consumer_pool.append(k)
-        for m in consumer:
-            m.join()
-        for p in producer_pool:
-            p.join()
-        logging.info("=" * 30 + "->exit ......")
-    except Exception as e:
-        logging.error(e)
+
+    producer,consumer=[],[]
+    for p in range(1):
+        producer_thread=ProducerJobConf(job_queue)
+        producer_thread.start()
+        producer.append(producer_thread)
+    for c in range(job_queue.qsize()):
+        consumer_thread=ConsumerJobConf(job_queue)
+        consumer_thread.start()
+        consumer.append(consumer_thread)
+    for c in consumer:
+        c.join()
+    for p in producer:
+        p.join()
+    logging.info("=" * 30 + "->exit ......")
+

@@ -10,7 +10,7 @@
         "head": 1,
         "partition": 10,
         "table_name": "breast_b",
-        "namespace": "demo",
+        "namespace": "db_guest4",
         "work_mode": 1
       },
       "host": {
@@ -22,7 +22,7 @@
         "head": 1,
         "partition": 10,
         "table_name": "breast_a",
-        "namespace": "demo",
+        "namespace": "db_host4",
         "work_mode": 1
       }
     },
@@ -36,7 +36,7 @@
         "head": 1,
         "partition": 10,
         "table_name": "breast_b",
-        "namespace": "demo",
+        "namespace": "tttt",
         "work_mode": 1
       },
       "host": {
@@ -48,7 +48,7 @@
         "head": 1,
         "partition": 10,
         "table_name": "breast_a",
-        "namespace": "demo",
+        "namespace": "tttt",
         "work_mode": 1
       }
     },

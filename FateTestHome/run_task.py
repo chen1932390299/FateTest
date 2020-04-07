@@ -172,27 +172,16 @@ def upload_task():
     hook_pwd = os.getcwd()
     command_guest = f"source {env_path}&&cd {hook_pwd}&& python upload_hook.py -role guest"
     command_host = f"ssh {host_ip}  source {env_path}&&cd {hook_pwd}&& python upload_hook.py -role host"
-    try:
-        print("--" * 30 + "\n" + f"start upload guest:****{guest_ip}\n" + "--" * 30 + "\n")
-        sp_guest = subprocess.Popen(command_guest, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        out_guest, err_guest = sp_guest.communicate()
-        if sp_guest.returncode == 0:
-            logging.debug(out_guest.decode())
-        else:
-            logging.error(err_guest)
-    except Exception as e:
-        logging.error(e)
-    finally:
+    command_list=[command_guest,command_host]
+    for index,cmd in enumerate(command_list):
+        if index ==0:print("--" * 30 + "\n" + f"start upload guest:****{guest_ip}\n" + "--" * 30 + "\n")
+        if index ==1:print("--" * 30 + "\n" + f"start upload host:****{host_ip}\n" + "--" * 30 + "\n")
         try:
-            print("--" * 30 + "\n" + f"start upload host:****{host_ip}\n" + "--" * 30 + "\n")
-            sp_host = subprocess.Popen(command_host, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            out_host, err_host = sp_host.communicate()
-            if sp_host.returncode == 0:
-                logging.debug(out_host.decode())
-            else:
-                logging.error(err_host)
-        except Exception as f:
-            print(f)
+            sp = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            out, err = sp.communicate()
+            if sp.returncode == 0: logging.info(out.decode())
+            else: logging.error(err)
+        except Exception as e: logging.error(e)
 
 
 def check_table():
@@ -200,12 +189,13 @@ def check_table():
     check_cwd = os.getcwd()
     exe_cmd_guest = f"source {env_path} && cd {check_cwd} && python upload_check.py -role guest"
     exe_cmd_host = f"ssh {host_ip} source {env_path} && cd {check_cwd} && python upload_check.py -role host"
-    try:
-        print("\n" + "--" * 30 + f"\nstart check guest table_info:****{guest_ip}".upper() + "\n" + "--" * 30 + "\n")
-        pipe = subprocess.Popen(exe_cmd_guest, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    exe_cmd_list=[exe_cmd_guest,exe_cmd_host]
+    for index,cmd in enumerate(exe_cmd_list):
+        if index ==0: print("\n" + "--" * 30 + f"\nstart check guest table_info:****{guest_ip}".upper() + "\n" + "--" * 30 + "\n")
+        if index ==1: print("--" * 30 + "\n" + f"start check host table_info:****{host_ip}".upper() + "\n" + "--" * 30 + "\n")
+        pipe = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         out, err = pipe.communicate()
-        if pipe.returncode != 0:
-            logging.error(err)
+        if pipe.returncode != 0:logging.error(err)
         else:
             msg_list = json.loads(out.decode()).get("table_info")
             for it in msg_list:
@@ -216,22 +206,7 @@ def check_table():
                     logging.error(color_str(f"namespace:{db},table_name:{tb},eggroll count is {count}", "red"))
                 else:
                     logging.info(color_str(f"namespace:{db},table_name:{tb},eggroll count is {count}", "green"))
-    finally:
-        print("--" * 30 + "\n" + f"start check host table_info:****{host_ip}".upper() + "\n" + "--" * 30 + "\n")
-        pipe_host = subprocess.Popen(exe_cmd_host, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        out_host, err_host = pipe_host.communicate()
-        if pipe_host.returncode != 0:
-            logging.error(err_host)
-        else:
-            msg_list_host = json.loads(out_host.decode()).get("table_info")
-            for it in msg_list_host:
-                data_a = it.get("data")
-                db_a, tb_a, count_a = data_a.get("namespace"), data_a.get("table_name"), data_a.get("count")
-                if count_a == 0:
-                    early_stop += 1
-                    logging.error(color_str(f"namespace:{db_a},table_name:{tb_a},eggroll count is {count_a}", "red"))
-                else:
-                    logging.info(color_str(f"namespace:{db_a},table_name:{tb_a},eggroll count is {count_a}", "green"))
+
     if early_stop: raise NameError("check upload false")
 
 

@@ -21,22 +21,28 @@
             "expect_status": "success"
         },
         {
-            "dsl_path": "examples/test_hetero_lr_job_dsl.json",
-            "config_path": "examples/test_hetero_lr_job_conf.json",
-            "algorithm_type": "hetero",
+            "dsl_path": "examples/secureboost_cv_bin_dsl.json",
+            "config_path": "examples/secureboost_cv_bin_conf.json",
+            "algorithm_type": "secureboost",
             "param_test": {
-                "$..hetero_lr_0..max_iter": 4,
-                "$..hetero_lr_0..learning_rate": 0.2
+                "$..guest..data..namespace": "hetero",
+                "$..host..data..namespace": "hetero"
             },
             "expect_status": "success"
         },
         {
-            "dsl_path": "examples/test_hetero_lr_job_dsl.json",
-            "config_path": "examples/test_hetero_lr_job_conf.json",
-            "algorithm_type": "hetero",
+            "dsl_path": "examples/homolr_evaluate_dsl.json",
+            "config_path": "examples/homolr_evaluate_conf.json",
+            "algorithm_type": "homo",
             "param_test": {
-                "$..hetero_lr_0..max_iter": 2,
-                "$..hetero_lr_0..learning_rate": 0.2
+                "$..guest..train_data..namespace": "homo",
+                "$..guest..eval_data..namespace": "homo",
+                "$..host..train_data..namespace": "homo",
+                "$..host..eval_data..namespace": "homo",
+                "$..guest..train_data..name": "breast_b",
+                "$..guest..eval_data..name": "breast_b",
+                "$..host..train_data..name": "breast_a",
+                "$..host..eval_data..name": "breast_a"
             },
             "expect_status": "success"
         }

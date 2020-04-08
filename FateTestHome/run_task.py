@@ -5,7 +5,7 @@ from logutil import logger
 import requests
 import json
 import subprocess
-import os
+import os,time
 import tempfile
 from explore_core import muti_replace
 from datetime import datetime
@@ -75,7 +75,7 @@ async def jobs(job_id):
         res = requests.get(url=f"http://{guest_ip}:8080/job/query/{job_id}/guest/{part_id_guest}")
         response = res.json()
         job_data=response["data"]["job"]
-        job_status,start_time,update_time = job_data["fStatus"],job_data["fStartTime"],job_data["fUpdateTime"]
+        job_status,start_time,update_time = job_data["fStatus"],job_data["fStartTime"],int(time.time()*1000)
         running_time = 0
         if start_time and update_time:
             st = datetime.utcfromtimestamp(start_time / 1000)
@@ -87,7 +87,7 @@ async def jobs(job_id):
                 cmd = f" source {env_path} && python {FATE_FLOW_PATH} -f stop_job -j {job_id}"
                 stdout=exc_cmd(cmd,shell_switch=True)
                 if stdout["retcode"] == 0:logging.warning(color_str(
-                    f"auto killed job {job_id} Caused by running timeout of setting {ttl} seconds >>>>","gray"))
+                    f"auto killed job {job_id},has run {running_time} seconds ,timeout of setting {ttl} seconds >>>>","gray"))
 
 
 async def do_work(job_id):

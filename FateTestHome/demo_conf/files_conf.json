@@ -10,7 +10,7 @@
         "head": 1,
         "partition": 10,
         "table_name": "breast_b",
-        "namespace": "db_guest4",
+        "namespace": "hetero",
         "work_mode": 1
       },
       "host": {
@@ -22,13 +22,13 @@
         "head": 1,
         "partition": 10,
         "table_name": "breast_a",
-        "namespace": "db_host4",
+        "namespace": "hetero",
         "work_mode": 1
       }
     },
     {
       "guest": {
-        "file": "examples/data/breast_b.csv",
+        "file": "examples/data/breast_homo_guest.csv",
         "local": {
           "party_id": 9999,
           "role": "guest"
@@ -36,11 +36,11 @@
         "head": 1,
         "partition": 10,
         "table_name": "breast_b",
-        "namespace": "tttt",
+        "namespace": "homo",
         "work_mode": 1
       },
       "host": {
-        "file": "examples/data/breast_a.csv",
+        "file": "examples/data/breast_homo_host.csv",
         "local": {
           "party_id": 10000,
           "role": "host"
@@ -48,7 +48,7 @@
         "head": 1,
         "partition": 10,
         "table_name": "breast_a",
-        "namespace": "tttt",
+        "namespace": "homo",
         "work_mode": 1
       }
     },

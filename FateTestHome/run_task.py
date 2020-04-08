@@ -24,6 +24,21 @@ ttl = ssh_conf.get("JOB_TIMEOUT_SECONDS")
 files_conf = json.load(open("./demo_conf/files_conf.json", "r+")).get("file_conf")
 
 
+def exc_cmd(args,shell_switch,decoder=True):
+    sub = subprocess.Popen(args,
+                           shell=shell_switch,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.STDOUT)
+    stdout,stderr=sub.communicate()
+    try:
+        if decoder:
+            stdout=json.loads(stdout.decode("utf-8"))
+            return stdout
+        else: return stdout
+    except json.decoder.JSONDecodeError:
+        raise ValueError(stdout)
+
+
 def sub_task(dsl_path, config_path, role, param_test):
     task = "submit_job"
     with open(dsl_path, "r+") as f:
@@ -38,24 +53,8 @@ def sub_task(dsl_path, config_path, role, param_test):
     dsl_path, config_path = dsl.name, conf.name
     dsl.seek(0)
     conf.seek(0)
-    sub = subprocess.Popen(["python",
-                            FATE_FLOW_PATH,
-                            "-f",
-                            task,
-                            "-d",
-                            dsl_path,
-                            "-c",
-                            config_path],
-                           shell=False,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
-    if os.path.exists(dsl.name): print(dsl.name)
-    if os.path.exists(conf.name): print(conf.name)
-    print("*" * 60)
-
-    stdout, stderr = sub.communicate()
-    stdout = stdout.decode("utf-8")
-    stdout = json.loads(stdout)
+    args=["python",FATE_FLOW_PATH,"-f",task,"-d",dsl_path,"-c",config_path]
+    stdout = exc_cmd(args,shell_switch=False)
     status = stdout["retcode"]
     dsl.close()
     conf.close()
@@ -75,32 +74,20 @@ async def jobs(job_id):
     while True:
         res = requests.get(url=f"http://{guest_ip}:8080/job/query/{job_id}/guest/{part_id_guest}")
         response = res.json()
-        job_status = response["data"]["job"]["fStatus"]
-        start_time = response["data"]["job"]["fStartTime"]
-        update_time = response["data"]["job"]["fUpdateTime"]
+        job_data=response["data"]["job"]
+        job_status,start_time,update_time = job_data["fStatus"],job_data["fStartTime"],job_data["fUpdateTime"]
         running_time = 0
         if start_time and update_time:
             st = datetime.utcfromtimestamp(start_time / 1000)
             ud = datetime.utcfromtimestamp(update_time / 1000)
             running_time = (ud - st).seconds
-        if job_status in ["success", "failed"]:
-            if job_status in ["success", "failed", "canceled"]:
-                return response
-        else:
-            # running ,"waiting"
-            if running_time:
-                if int(running_time) > ttl:  # >3600*8 hour
-                    cmd = f" source {env_path} && python {FATE_FLOW_PATH} -f stop_job -j {job_id}"
-                    sub = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                    stdout, stderr = sub.communicate()
-                    if sub.returncode == 0:
-                        if json.loads(stdout.decode("utf-8"))["retcode"] == 0:
-                            logging.info(f">>>>>kill job {job_id} by stop_job success>>>>")
-                    else:
-                        logging.error(stderr)
-                    logging.warning(color_str(
-                        f">>>>>auto killed job {job_id} Caused by running timeout of setting {ttl} seconds >>>>",
-                        "gray"))
+        if job_status in ["success", "failed","canceled"]:return response
+        else: # running ,"waiting"
+            if running_time and int(running_time) > ttl:
+                cmd = f" source {env_path} && python {FATE_FLOW_PATH} -f stop_job -j {job_id}"
+                stdout=exc_cmd(cmd,shell_switch=True)
+                if stdout["retcode"] == 0:logging.warning(color_str(
+                    f"auto killed job {job_id} Caused by running timeout of setting {ttl} seconds >>>>","gray"))
 
 
 async def do_work(job_id):
@@ -185,12 +172,8 @@ def upload_func(operate_role):
         print("--" * 30 + "\n" + f"start upload guest:****{guest_ip}\n" + "--" * 30 + "\n")
         hook_pwd = os.getcwd()
         command_guest = f"source {env_path}&&cd {hook_pwd}&& python upload_hook.py -role guest"
-        try:
-            sp = subprocess.Popen(command_guest, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            out, err = sp.communicate()
-            if sp.returncode == 0: logging.info(out.decode())
-            else: logging.error(err)
-        except Exception as e: logging.error(e)
+        stdout=exc_cmd(command_guest,True,False)
+        logging.debug(stdout.decode())
     if operate_role=="host":
         print("--" * 30 + "\n" + f"start upload host:****{host_ip}\n" + "--" * 30 + "\n")
         for cf in files_conf:
@@ -199,16 +182,13 @@ def upload_func(operate_role):
                 with tempfile.NamedTemporaryFile("w",delete=True,suffix=".json") as f:
                     json.dump(role_file_conf, f)
                     f.flush()
-                    if host_ip:
-                        st=subprocess.Popen(["scp", f.name, f"{host_ip}:{f.name}"],shell=False)
-                        upload_cmd = " && ".join([f"source {env_path}",
-                                                  f"python {FATE_FLOW_PATH} -f upload -c {f.name}",
-                                                  f"rm {f.name}"])
-                        sub=subprocess.Popen(["ssh", host_ip, upload_cmd],shell=False,stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                        out,err=sub.communicate()
-                        if sub.returncode ==0:
-                            logging.info(out.decode())
-                        else:logging.error(err)
+                    st=subprocess.Popen(["scp", "-q",f.name, f"{host_ip}:{f.name}"],shell=False)
+                    upload_cmd = " && ".join([f"source {env_path}",
+                                              f"python {FATE_FLOW_PATH} -f upload -c {f.name}",
+                                              f"rm {f.name}"])
+                    stdout=exc_cmd(["ssh", host_ip, upload_cmd],False)
+                    logging.debug(stdout)
+
             else:pass
 
 
@@ -219,27 +199,20 @@ def upload_task():
 
 
 def check_func(role):
-    early_stop = 0
     if role == "guest":
         check_cwd = os.getcwd()
         cmd = f"source {env_path} && cd {check_cwd} && python upload_check.py -role guest"
         print("\n" + "--" * 30 + f"\nstart check guest table_info:****{guest_ip}".upper() + "\n" + "--" * 30 + "\n")
-        pipe = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        out, err = pipe.communicate()
-        if pipe.returncode != 0:
-            logging.error(err)
-        else:
-            msg_list = json.loads(out.decode()).get("table_info")
-            for it in msg_list:
-                data = it.get("data")
-                db, tb, count = data.get("namespace"), data.get("table_name"), data.get("count")
-                if count == 0:
-                    early_stop += 1
-                    logging.error(color_str(f"namespace:{db},table_name:{tb},eggroll count is {count}", "red"))
-                else:
-                    logging.info(color_str(f"namespace:{db},table_name:{tb},eggroll count is {count}", "green"))
+        stdout = exc_cmd(cmd,True)
+        msg_list = stdout.get("table_info")
+        for it in msg_list:
+            data = it.get("data")
+            db, tb, count = data.get("namespace"), data.get("table_name"), data.get("count")
+            if count == 0:
+                raise ValueError(color_str(f"namespace:{db},table_name:{tb},eggroll count is {count}", "red"))
+            else:
+                logging.info(color_str(f"namespace:{db},table_name:{tb},eggroll count is {count}", "green"))
 
-        if early_stop: raise NameError("check guest upload false")
     if role == "host":
         print("--" * 30 + "\n" + f"start check host table_info:****{host_ip}".upper() + "\n" + "--" * 30 + "\n")
         for cf in files_conf:
@@ -247,21 +220,15 @@ def check_func(role):
             if role_file_conf:
                 namespace = role_file_conf.get("namespace")
                 table_name = role_file_conf.get("table_name")
-                if host_ip:
-                    query_table_cmd = " && ".join([f"source {env_path}",
-                                              f"python {FATE_FLOW_PATH} -f table_info -n {namespace} -t {table_name}"
-                                              ])
-                    sub=subprocess.Popen(["ssh", host_ip, query_table_cmd],shell=False,stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                    out,err=sub.communicate()
-                    if sub.returncode ==0:
-                        data=json.loads(out.decode()).get("data")
-                        count,tag=data.get("count"),None
-                        if count ==0: logging.error(color_str(f"namespace: {namespace}, table_name: {table_name} count:{count}","red"))
-                        else:logging.info(color_str(f"namespace: {namespace}, table_name: {table_name} count:{count}","green"))
-                        if count ==0:early_stop +=1
-                    else:logging.error(err)
+                query_table_cmd = " && ".join([f"source {env_path}",
+                                          f"python {FATE_FLOW_PATH} -f table_info -n {namespace} -t {table_name}"
+                                          ])
+                stdout=exc_cmd(["ssh", host_ip, query_table_cmd],False)
+                data=stdout.get("data")
+                count,tag=data.get("count"),None
+                if count ==0: raise ValueError(color_str(f"namespace: {namespace}, table_name: {table_name} count:{count}","red"))
+                else:logging.info(color_str(f"namespace: {namespace}, table_name: {table_name} count:{count}","green"))
             else:pass
-        if early_stop: raise  NameError("check host upload false")
 
 
 def check_table():
@@ -271,12 +238,11 @@ def check_table():
         check_func("host")
 
 
-if __name__ == '__main__':
+def test_suite():
     upload_task()
     print("--" * 30 + "\n" + "->Start check ${namespace} ${table_info} uploaded ...\n" + "--" * 30 + "\n")
     check_table()
     print("--" * 30 + "\n" + "finish all guest and host upload check".upper() + "\n" + "--" * 30 + "\n")
-
     producer,consumer=[],[]
     for p in range(1):
         producer_thread=ProducerJobConf(job_queue)
@@ -291,4 +257,8 @@ if __name__ == '__main__':
     for p in producer:
         p.join()
     logging.info("=" * 30 + "->exit ......")
+
+
+if __name__ == '__main__':
+    test_suite()
 
